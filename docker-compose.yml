@@ -1,0 +1,27 @@
+services:
+  web:
+    # Define the 'web' service, which represents the frontend application.
+    build:
+      # Specify the build context, which is the directory containing the Dockerfile and application code.
+      context: .
+      # Use the 'Dockerfile.dev' file to build the Docker image for this service.
+      dockerfile: Dockerfile.dev
+    # Map port 8080 on the host machine to port 3000 inside the container.
+    # This allows accessing the application running inside the container on port 3000 via localhost:8080 on the host machine.
+    ports:
+      - '8080:3000'
+    # Mount volumes to enable live code reloading during development.
+    volumes:
+      # Exclude the 'node_modules' directory inside the container to avoid overwriting it with the host's empty directory.
+      - /app/node_modules
+      # Mount the current directory (.) on the host to the '/app' directory inside the container.
+      # This ensures that changes made to the code on the host are reflected inside the container in real-time.
+      - .:/app
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - /app/node_modules
+      - .:/app
+    command: ['npm', 'run', 'test']
