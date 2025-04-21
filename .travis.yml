@@ -1,0 +1,9 @@
+sudo: required
+services:
+  - docker
+
+before_install:
+  - docker build -t oopdaddy/docker-react -f Dockerfile.dev .
+
+script:
+  - docker run -e CI=true oopdaddy/docker-react npm run test
