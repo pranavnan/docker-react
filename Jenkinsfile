@@ -1,12 +1,19 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'node:18' // Includes bash, npm, etc.
+            args '-v /var/run/docker.sock:/var/run/docker.sock' // Allow docker commands
+        }
+    }
 
     environment {
         DOCKER_IMAGE = 'oopdaddy/docker-react'
         AWS_DEFAULT_REGION = 'ap-south-1'
         AWS_EB_APP_NAME = 'docker-react'
         AWS_EB_ENV_NAME = 'Docker-react-env'
-        HOME = '/Users/pranavnandane'
+        AWS_S3_BUCKET = 'your-eb-s3-bucket-name'
+        AWS_S3_KEY = "docker-react/${BUILD_NUMBER}.zip"
+        HOME = '/home/node'
     }
 
     triggers {
@@ -16,16 +23,9 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: '*/master']],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/pranavnan/docker-react.git',
-                        credentialsId: 'github-creds'
-                    ]]
-                ])
+                checkout scm
                 echo "Branch: ${env.BRANCH_NAME}"
-                echo "Change ID: ${env.CHANGE_ID}"
+                echo "Change ID (PR): ${env.CHANGE_ID}"
                 echo "Build URL: ${env.BUILD_URL}"
             }
         }
@@ -33,46 +33,53 @@ pipeline {
         stage('Check Environment') {
             steps {
                 sh '''
-                    echo "Current user:"
-                    id
+                    echo "User:"
+                    whoami
                     echo "Docker version:"
                     docker version
-                    echo "Working directory:"
-                    pwd
-                    echo "Home directory:"
-                    echo $HOME
+                    echo "Working dir: $(pwd)"
+                    echo "Node version:"
+                    node -v
+                    echo "NPM version:"
+                    npm -v
                 '''
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build Dev Image') {
             steps {
-                script {
-                    sh 'docker build -t ${DOCKER_IMAGE} -f Dockerfile.dev .'
-                }
+                sh 'docker build -t ${DOCKER_IMAGE} -f Dockerfile.dev .'
             }
         }
 
         stage('Run Tests') {
             steps {
-                script {
-                    sh 'docker run -e CI=true ${DOCKER_IMAGE} npm run test'
-                }
+                sh 'docker run -e CI=true ${DOCKER_IMAGE} npm run test'
             }
         }
 
-        stage('Build Production Image') {
+        stage('Build Prod Image') {
             when {
                 branch 'master'
             }
             steps {
-                script {
-                    sh 'docker build -t ${DOCKER_IMAGE}-prod -f Dockerfile .'
-                }
+                sh 'docker build -t ${DOCKER_IMAGE}-prod -f Dockerfile .'
             }
         }
 
-        stage('Deploy to AWS') {
+        stage('Package App') {
+            when {
+                branch 'master'
+            }
+            steps {
+                sh '''
+                    zip -r ${BUILD_NUMBER}.zip * .[^.]* -x Jenkinsfile
+                    aws s3 cp ${BUILD_NUMBER}.zip s3://${AWS_S3_BUCKET}/${AWS_S3_KEY}
+                '''
+            }
+        }
+
+        stage('Deploy to AWS EB') {
             when {
                 branch 'master'
             }
@@ -97,26 +104,27 @@ pipeline {
     post {
         always {
             cleanWs()
-            echo "Build Status: ${currentBuild.currentResult}"
-            echo "Webhook Payload: ${env.GITHUB_PAYLOAD}"
+            echo "Build Result: ${currentBuild.currentResult}"
         }
+
         success {
             script {
                 if (env.CHANGE_ID) {
-                    echo "PR #${env.CHANGE_ID} tests passed successfully"
+                    echo "✅ PR #${env.CHANGE_ID} tests passed."
                 } else if (env.BRANCH_NAME == 'master') {
-                    echo "Successfully deployed to AWS"
+                    echo "🚀 Successfully deployed to AWS EB!"
                 }
             }
         }
+
         failure {
             script {
                 if (env.CHANGE_ID) {
-                    echo "PR #${env.CHANGE_ID} tests failed"
+                    echo "❌ PR #${env.CHANGE_ID} tests failed."
                 } else if (env.BRANCH_NAME == 'master') {
-                    echo "Deployment to AWS failed"
+                    echo "❌ Deployment to AWS EB failed."
                 }
             }
         }
     }
-} 
+}
