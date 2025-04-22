@@ -15,6 +15,8 @@ pipeline {
         AWS_S3_BUCKET = 'your-eb-s3-bucket-name'
         AWS_S3_KEY = "docker-react/${BUILD_NUMBER}.zip"
         HOME = '/home/node'
+        PATH = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+        SHELL = '/bin/bash'
     }
 
     triggers {
