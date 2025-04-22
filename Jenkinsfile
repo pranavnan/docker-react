@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = 'oopdaddy/docker-react'
-        AWS_DEFAULT_REGION = 'us-east-1'
+        AWS_DEFAULT_REGION = 'ap-south-1'
         AWS_EB_APP_NAME = 'docker-react'
         AWS_EB_ENV_NAME = 'Docker-react-env'
     }
