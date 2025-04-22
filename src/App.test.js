@@ -16,5 +16,5 @@ test('renders learn react link1', () => {
   // Check if the "Learn React" link is present in the document
   const linkElement = screen.getByText(/learn react/i);
   expect(linkElement).toBeInTheDocument();
-  // expect(0).toBe(1);
+  expect(0).toBe(0);
 });
