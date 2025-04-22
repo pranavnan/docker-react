@@ -6,6 +6,7 @@ pipeline {
         AWS_DEFAULT_REGION = 'ap-south-1'
         AWS_EB_APP_NAME = 'docker-react'
         AWS_EB_ENV_NAME = 'Docker-react-env'
+        HOME = '/Users/pranavnandane'
     }
 
     triggers {
@@ -29,10 +30,25 @@ pipeline {
             }
         }
 
+        stage('Check Environment') {
+            steps {
+                sh '''
+                    echo "Current user:"
+                    id
+                    echo "Docker version:"
+                    docker version
+                    echo "Working directory:"
+                    pwd
+                    echo "Home directory:"
+                    echo $HOME
+                '''
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}", "-f Dockerfile.dev .")
+                    sh 'docker build -t ${DOCKER_IMAGE} -f Dockerfile.dev .'
                 }
             }
         }
@@ -40,7 +56,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    sh "docker run -e CI=true ${DOCKER_IMAGE} npm run test"
+                    sh 'docker run -e CI=true ${DOCKER_IMAGE} npm run test'
                 }
             }
         }
@@ -51,7 +67,7 @@ pipeline {
             }
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}-prod", "-f Dockerfile .")
+                    sh 'docker build -t ${DOCKER_IMAGE}-prod -f Dockerfile .'
                 }
             }
         }
