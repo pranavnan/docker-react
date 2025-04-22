@@ -15,7 +15,14 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/master']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/pranavnan/docker-react.git',
+                        credentialsId: 'github-creds'
+                    ]]
+                ])
                 echo "Branch: ${env.BRANCH_NAME}"
                 echo "Change ID: ${env.CHANGE_ID}"
                 echo "Build URL: ${env.BUILD_URL}"
