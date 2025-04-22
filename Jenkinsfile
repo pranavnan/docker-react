@@ -8,10 +8,24 @@ pipeline {
         AWS_EB_ENV_NAME = 'Docker-react-env'
     }
 
+    triggers {
+        githubPush()
+    }
+
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/master']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/pranavnan/docker-react.git',
+                        credentialsId: 'github-creds'
+                    ]]
+                ])
+                echo "Branch: ${env.BRANCH_NAME}"
+                echo "Change ID: ${env.CHANGE_ID}"
+                echo "Build URL: ${env.BUILD_URL}"
             }
         }
 
@@ -67,14 +81,14 @@ pipeline {
     post {
         always {
             cleanWs()
+            echo "Build Status: ${currentBuild.currentResult}"
+            echo "Webhook Payload: ${env.GITHUB_PAYLOAD}"
         }
         success {
             script {
                 if (env.CHANGE_ID) {
-                    // This is a PR
                     echo "PR #${env.CHANGE_ID} tests passed successfully"
                 } else if (env.BRANCH_NAME == 'master') {
-                    // This is a master branch build
                     echo "Successfully deployed to AWS"
                 }
             }
@@ -82,10 +96,8 @@ pipeline {
         failure {
             script {
                 if (env.CHANGE_ID) {
-                    // This is a PR
                     echo "PR #${env.CHANGE_ID} tests failed"
                 } else if (env.BRANCH_NAME == 'master') {
-                    // This is a master branch build
                     echo "Deployment to AWS failed"
                 }
             }
