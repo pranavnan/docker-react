@@ -3,6 +3,7 @@ pipeline {
         docker {
             image 'node:18' // Includes bash, npm, etc.
             args '-v /var/run/docker.sock:/var/run/docker.sock' // Allow docker commands
+            reuseNode true
         }
     }
 
